@@ -160,4 +160,5 @@ cython_debug/
 #.idea/
 
 # Dataset
-/data
+/data/lfw_data_imgs
+/data/lfw_hair_masks

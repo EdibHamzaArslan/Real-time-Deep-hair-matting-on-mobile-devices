@@ -1,0 +1,7 @@
+
+We use the following files for training/validation/testing.
+There are 1500 images in training, 500 used in validation, 
+and 927 used for testing.
+
+
+link -> http://vis-www.cs.umass.edu/lfw/part_labels/
