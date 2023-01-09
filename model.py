@@ -43,14 +43,14 @@ class Encoder(nn.Module):
             DepthWiseEncoder(out_channels_list[1], out_channels_list[1], stride=1, padding=1),
             # 256
             DepthWiseEncoder(out_channels_list[1], out_channels_list[2], stride=2, padding=1),
-            DepthWiseEncoder(out_channels_list[2], out_channels_list[2], stride=1, padding=1),
+            DepthWiseEncoder(out_channels_list[2], out_channels_list[2], stride=2, padding=1),
             # 512
             DepthWiseEncoder(out_channels_list[2], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
-            DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
+            DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=2, padding=1),
             # 1024
             DepthWiseEncoder(out_channels_list[3], out_channels_list[4], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[4], out_channels_list[4], stride=1, padding=1),
@@ -61,17 +61,21 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_channels=1024, out_channels_list=[64, 64, 64]):
+    def __init__(self, in_channels=1024, out_channels_list=[64, 64, 64, 64, 64]):
         super(Decoder, self).__init__()
         self.decoder_layer1 = DepthWiseDecoder(in_channels, out_channels_list[0], stride=1, padding=1)
         self.decoder_layer2 = DepthWiseDecoder(out_channels_list[0], out_channels_list[1], stride=1, padding=1)
         self.decoder_layer3 = DepthWiseDecoder(out_channels_list[1], out_channels_list[2], stride=1, padding=1)
+        self.decoder_layer4 = DepthWiseDecoder(out_channels_list[2], out_channels_list[3], stride=1, padding=1)
+        self.decoder_layer5 = DepthWiseDecoder(out_channels_list[3], out_channels_list[4], stride=1, padding=1)
     
     def forward(self, x):
         out1 = self.decoder_layer1(F.interpolate(x, scale_factor=2, mode="nearest"))
         out2 = self.decoder_layer2(F.interpolate(out1, scale_factor=2, mode="nearest"))
         out3 = self.decoder_layer3(F.interpolate(out2, scale_factor=2, mode="nearest"))
-        return out3
+        out4 = self.decoder_layer3(F.interpolate(out3, scale_factor=2, mode="nearest"))
+        out5 = self.decoder_layer3(F.interpolate(out4, scale_factor=2, mode="nearest"))
+        return out5
 
 
 
@@ -81,7 +85,7 @@ class HairSegNet(nn.Module):
         self.first_conv = nn.Conv2d(in_channels, 32, kernel_size=3, stride=2, padding=1)
         self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
         self.encoder = Encoder(in_channels=32, out_channels_list=[64, 128, 256, 512, 1024])
-        self.decoder = Decoder(in_channels=1024, out_channels_list=[64, 64, 64])
+        self.decoder = Decoder(in_channels=1024, out_channels_list=[64, 64, 64, 64, 64])
     
     def forward(self, x):
         x = self.first_conv(x)
@@ -99,6 +103,19 @@ def count_parameters(model):
 
 
 if __name__ == "__main__":
+    # import torchvision
+    # model = torchvision.models.mobilenet_v2(pretrained=True)
+    # print(model)
+
+    # import timm
+    # available_models = timm.list_models("*mobilenet*")
+    # # for model_name in available_models:
+    # #     print(model_name)
+    # model = timm.create_model("mobilenetv2_035")
+    # print(model)
+    
+    
+
     x = torch.randn(1, 3, 224, 224)
     model = HairSegNet(3, 2)
     out = model(x)
