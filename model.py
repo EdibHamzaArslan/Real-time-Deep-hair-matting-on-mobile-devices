@@ -47,20 +47,21 @@ class Encoder(nn.Module):
         self.encoder_layer3 = nn.Sequential(
             # 256
             DepthWiseEncoder(out_channels_list[1], out_channels_list[2], stride=2, padding=1),
-            DepthWiseEncoder(out_channels_list[2], out_channels_list[2], stride=2, padding=1),
+            DepthWiseEncoder(out_channels_list[2], out_channels_list[2], stride=1, padding=1),
         )
         self.encoder_layer4 = nn.Sequential(
             # 512
-            DepthWiseEncoder(out_channels_list[2], out_channels_list[3], stride=1, padding=1),
+            DepthWiseEncoder(out_channels_list[2], out_channels_list[3], stride=2, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
             DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1),
-            DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=2, padding=1),
+            DepthWiseEncoder(out_channels_list[3], out_channels_list[3], stride=1, padding=1)
+            
         )
         self.encoder_layer5 = nn.Sequential(
             # 1024
-            DepthWiseEncoder(out_channels_list[3], out_channels_list[4], stride=1, padding=1),
+            DepthWiseEncoder(out_channels_list[3], out_channels_list[4], stride=2, padding=1),
             DepthWiseEncoder(out_channels_list[4], out_channels_list[4], stride=1, padding=1),
         )
     
@@ -82,38 +83,39 @@ class Decoder(nn.Module):
         self.decoder_block4 = DepthWiseDecoder(out_channels_list[2], out_channels_list[3], stride=1, padding=1)
         self.decoder_block5 = DepthWiseDecoder(out_channels_list[3], out_channels_list[4], stride=1, padding=1)
     
-    def forward(self, x):
-        out1 = self.decoder_block1(F.interpolate(x, scale_factor=2, mode="nearest"))
-        out2 = self.decoder_block2(F.interpolate(out1, scale_factor=2, mode="nearest"))
-        out3 = self.decoder_block3(F.interpolate(out2, scale_factor=2, mode="nearest"))
-        out4 = self.decoder_block4(F.interpolate(out3, scale_factor=2, mode="nearest"))
+    def forward(self, x, res1, res2, res3, res4):
+        out1 = self.decoder_block1(res4 + F.interpolate(x, scale_factor=2, mode="nearest"))
+        out2 = self.decoder_block2(res3 + F.interpolate(out1, scale_factor=2, mode="nearest"))
+        out3 = self.decoder_block3(res2 + F.interpolate(out2, scale_factor=2, mode="nearest"))
+        out4 = self.decoder_block4(res1 + F.interpolate(out3, scale_factor=2, mode="nearest"))
         out5 = self.decoder_block5(F.interpolate(out4, scale_factor=2, mode="nearest"))
         return out5
 
 
 
-class HairSegNet(nn.Module):
+class HairMatteNet(nn.Module):
     def __init__(self, in_channels, num_classes):
-        super(HairSegNet, self).__init__()
+        super(HairMatteNet, self).__init__()
         self.first_conv = nn.Conv2d(in_channels, 32, kernel_size=3, stride=2, padding=1)
         self.encoder = Encoder(in_channels=32, out_channels_list=[64, 128, 256, 512, 1024])
-        self.res_conv1
-        self.res_conv2
-        self.res_conv3
-        self.res_conv4 = nn.Conv2d() # TODO: continue from here.
+        self.res_conv_layer1 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=1)
+        self.res_conv_layer2 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=1)
+        self.res_conv_layer3 = nn.Conv2d(in_channels=256, out_channels=64, kernel_size=1)
+        self.res_conv_layer4 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=1)
         self.decoder = Decoder(in_channels=1024, out_channels_list=[64, 64, 64, 64, 64])
         self.final_conv = nn.Conv2d(64, num_classes, kernel_size=1)
     
     def forward(self, x):
         x = self.first_conv(x)
-        x, encoder_res1, encoder_res2, encoder_res3, encoder_res4 = self.encoder(x)
+        x, encoder_res1_out, encoder_res2_out, encoder_res3_out, encoder_res4_out = self.encoder(x)
+        
+        res_out1 = self.res_conv_layer1(encoder_res1_out)
+        res_out2 = self.res_conv_layer2(encoder_res2_out)
+        res_out3 = self.res_conv_layer3(encoder_res3_out)
+        res_out4 = self.res_conv_layer4(encoder_res4_out)
 
-        x = self.decoder(x)
+        x = self.decoder(x, res_out1, res_out2, res_out3, res_out4)
         return self.final_conv(x)
-    
-
-class HairMatteNet(nn.Module):
-    pass
 
 
 def count_parameters(model):
@@ -132,11 +134,9 @@ if __name__ == "__main__":
     # model = timm.create_model("mobilenetv2_035")
     # print(model)
     
-    
-
     x = torch.randn(1, 3, 224, 224)
-    model = HairSegNet(3, 2)
-    print(model)
+    model = HairMatteNet(3, 2)
+    # print(model)
     # print(model.encoder.encoder_block[0].block[3])
     out = model(x)
     print(out.shape)
