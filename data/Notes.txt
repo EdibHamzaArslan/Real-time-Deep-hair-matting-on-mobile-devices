@@ -3,5 +3,8 @@ We use the following files for training/validation/testing.
 There are 1500 images in training, 500 used in validation, 
 and 927 used for testing.
 
+Hair red 255, 0, 0
+Face green 0, 255, 0
+Background blue 0, 0, 255
 
 link -> http://vis-www.cs.umass.edu/lfw/part_labels/
