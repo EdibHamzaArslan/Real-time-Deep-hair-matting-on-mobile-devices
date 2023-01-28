@@ -71,12 +71,13 @@ class LFW(torch.utils.data.Dataset):
         bw_mask[background] = [1]
         bw_mask[hair] = [0]
         # mask = tf.one_hot(empty_masked, self.NUM_CLASS, dtype=tf.int32) # 512, 512, NUM_CLASS
-
-        bw_mask = torch.from_numpy(bw_mask)
+        # bw_mask = torch.from_numpy(bw_mask)
+        bw_mask = np.resize(bw_mask, (224, 224))
         if self.transform:
             img = self.transform(img)
-            # bw_mask = self.transform(bw_mask)
-                
+            
+            # bw_mask = self.transform(bw_mask.reshape(1, -1))
+        
         return img, bw_mask
 
 
